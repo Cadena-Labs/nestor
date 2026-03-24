@@ -60,6 +60,7 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 
 ## Learned Workspace Facts
 
+- Single maintainer on this project; history rewrites and force pushes do not require coordinating with other developers.
 - There is no `CLAUDE.md` in this repo; `AGENTS.md` is the canonical agent-facing project summary.
 - Local Wrangler development expects Worker secrets in `.dev.vars` at the repository root; the app does not load `.env` by default.
 - Optional `.1password/environments.toml` with `mount_paths` limits the 1Password Cursor plugin’s mounted-env validation to those paths; developers without a matching 1Password FIFO at those paths may see shell commands blocked in Cursor until they align mounts or disable validation for the repo.
