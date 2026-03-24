@@ -1,0 +1,33 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "nestor",
+	"compatibility_date": "2026-03-17",
+	"main": "./workers/app.ts",
+	"observability": {
+		"enabled": true
+	},
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "nestor",
+			"database_id": "local"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "CHAT_RATE_LIMITER",
+				"class_name": "ChatRateLimiter"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v2-chat-rate-limiter",
+			"new_classes": ["ChatRateLimiter"]
+		}
+	]
+}

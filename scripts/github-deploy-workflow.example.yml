@@ -1,0 +1,36 @@
+# Copy to .github/workflows/deploy.yml (or merge into your pipeline).
+# Requires: CLOUDFLARE_API_TOKEN
+#
+# With 1Password Connect (runtime secrets in Connect item fields), you only deploy —
+# no 1Password Environment sync step. Set CONNECT_* on the Worker in Wrangler / dashboard.
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Build and deploy
+        run: bun run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+# --- Optional: 1Password Environments → Wrangler (no Connect) ---
+# Add a step before deploy:
+#
+#   - name: Sync secrets from 1Password Environment
+#     run: bun run secrets:sync
+#     env:
+#       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+#       OP_ENVIRONMENT_ID: ${{ vars.OP_ENVIRONMENT_ID }}
