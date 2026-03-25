@@ -24,17 +24,17 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 
 ## Secrets (1Password Connect — preferred for production)
 
-[1Password Connect](https://developer.1password.com/docs/connect/) exposes a **private REST API** on infrastructure you run (`connect-api` + `connect-sync` containers). The Worker calls it with **`fetch`** (see [`app/lib/connect-env.ts`](app/lib/connect-env.ts)); the official `@1password/connect` npm client is **not** bundled because it depends on Node `stream` / axios.
+[1Password Connect](https://developer.1password.com/docs/connect/) exposes a **private REST API** on infrastructure you run (`connect-api` + `connect-sync` containers). The Worker calls it with `**fetch`** (see `[app/lib/connect-env.ts](app/lib/connect-env.ts)`); the official `@1password/connect` npm client is **not** bundled because it depends on Node `stream` / axios.
 
 - **Deploy Connect**: Follow [Get started with a Connect server](https://developer.1password.com/docs/connect/get-started) (Secrets Automation workflow, `1password-credentials.json`, access token, Docker/K8s). API shape: [Connect API reference](https://developer.1password.com/docs/connect/api-reference/) (e.g. `GET /v1/vaults/{vaultUUID}/items/{itemUUID}` with `Authorization: Bearer <token>`).
-- **1Password data model**: Connect reads **vault items**, not [Environments (beta)](https://developer.1password.com/docs/environments/read-environment-variables). Create one item (e.g. **Server** / **API Credential**) in a vault the server can access. Add **custom fields** whose **labels** exactly match Worker secret names (`ENCRYPTION_KEY`, `CLERK_SECRET_KEY`, … — see [`app/lib/worker-secret-keys.ts`](app/lib/worker-secret-keys.ts)).
-- **Cloudflare Worker env**: Set **`CONNECT_SERVER_URL`** (public **HTTPS** base URL of `connect-api`, reachable from Cloudflare’s network), **`CONNECT_VAULT_ID`**, **`CONNECT_ITEM_ID`** (often as non-secret `vars`), and **`CONNECT_TOKEN`** as a **Wrangler secret**. Optional **`CONNECT_CACHE_SECONDS`** (default 300) controls in-isolate caching of fetched fields.
-- **Networking**: The Connect API must be reachable from **Workers outbound** fetch (public hostname, or a tunnel such as Cloudflare Tunnel to your Connect host). Lock down with firewall / mTLS / token scoping as your threat model requires.
+- **1Password data model**: Connect reads **vault items**, not [Environments (beta)](https://developer.1password.com/docs/environments/read-environment-variables). Create one item (e.g. **Server** / **API Credential**) in a vault the server can access. Add **custom fields** whose **labels** exactly match Worker secret names (`ENCRYPTION_KEY`, `CLERK_SECRET_KEY`, … — see `[app/lib/worker-secret-keys.ts](app/lib/worker-secret-keys.ts)`).
+- **Cloudflare Worker env**: Set **`CONNECT_SERVER_URL`** (public **HTTPS** base URL of `connect-api`, e.g. [op-connect.cadenalabs.io](https://op-connect.cadenalabs.io), reachable from Cloudflare’s network), **`CONNECT_VAULT_ID`**, **`CONNECT_ITEM_ID`** (often as non-secret `vars`), and **`CONNECT_TOKEN`** as a **Wrangler secret**. Optional **`CONNECT_CACHE_SECONDS`** (default 300) controls in-isolate caching of fetched fields.
+- **Networking**: The Connect API is reachable from **Workers outbound** fetch (via Cloudflare Tunnel). Lock down with firewall / mTLS / token scoping as your threat model requires.
 - **Failure mode**: If Connect is configured but the fetch fails, the Worker responds **503** (“Service configuration error”).
 
 ## Secrets (1Password Environments + sync script — optional)
 
-- Use when you do **not** run Connect: keep a 1Password **Environment** as source of truth and run **`bun run secrets:sync`** in CI before deploy (see [`scripts/op-sync-wrangler-secrets.ts`](scripts/op-sync-wrangler-secrets.ts)). Requires `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENT_ID`. Example comments in [`scripts/github-deploy-workflow.example.yml`](scripts/github-deploy-workflow.example.yml).
+- Use when you do **not** run Connect: keep a 1Password **Environment** as source of truth and run `**bun run secrets:sync`** in CI before deploy (see `[scripts/op-sync-wrangler-secrets.ts](scripts/op-sync-wrangler-secrets.ts)`). Requires `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENT_ID`. Example comments in `[scripts/github-deploy-workflow.example.yml](scripts/github-deploy-workflow.example.yml)`.
 - **Local**: `bun run dev` with `op run` (see Learned Workspace Facts), `bun run dev:plain` with a static `.dev.vars`, or `secrets:sync --write-dev-vars`.
 
 ## Architecture
@@ -54,10 +54,11 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 
 ## Learned User Preferences
 
-- Use React Router v7 as the only HTTP/routing layer for this app, including all `/api/*` resource routes; do not add Hono or another parallel framework on the same worker.
+- Use React Router v7 as the only HTTP/routing layer for this app, including all `/api/`* resource routes; do not add Hono or another parallel framework on the same worker.
 - Treat security and trust boundaries as a primary concern when suggesting architecture, dependencies, or operational changes.
 - Prefer signed commits (for example SSH signing via 1Password); do not disable Git signing to work around an unavailable signing agent; do not leave unsigned commits on the history when rewriting is acceptable.
 - Prefer 1Password Connect for production application secrets when the goal is to avoid storing those values in the Cloudflare dashboard; use Environments plus `secrets:sync` when Connect is not deployed.
+- Do not use git worktrees; use normal branches instead for parallel work or isolated experiments.
 
 ## Learned Workspace Facts
 
