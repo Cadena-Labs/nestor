@@ -1,9 +1,9 @@
 import { convertToCoreMessages, streamText, type Message } from "ai";
-import { getModel, type Provider } from "../ai-provider";
+import { getModel, PROVIDERS, type Provider } from "../ai-provider";
 import { recordAuditEvent } from "../audit";
 import {
   decryptDeviceApiKey,
-  decryptUserSettingsApiKey,
+  decryptProviderApiKey,
 } from "../user-secret-upgrade";
 import { PanosClient, createPanosTools } from "../panos";
 import { chatRequestSchema } from "../validation";
@@ -82,19 +82,43 @@ export async function postChat(
 
   const settings = await db
     .prepare(
-      "SELECT provider, model_id, api_key_encrypted, key_version FROM user_settings WHERE user_id = ?"
+      "SELECT provider, model_id FROM user_settings WHERE user_id = ?"
     )
     .bind(userId)
     .first<{
-      provider: string;
+      provider: Provider;
       model_id: string;
-      api_key_encrypted: string;
-      key_version: number;
     }>();
 
   if (!settings) {
     return Response.json(
       { error: "Please configure your AI provider in settings" },
+      { status: 400 }
+    );
+  }
+
+  if (!settings.model_id) {
+    return Response.json(
+      { error: "Select a model in Settings before starting a chat" },
+      { status: 400 }
+    );
+  }
+
+  const providerKey = await db
+    .prepare(
+      "SELECT api_key_encrypted, key_version FROM user_provider_api_keys WHERE user_id = ? AND provider = ?"
+    )
+    .bind(userId, settings.provider)
+    .first<{
+      api_key_encrypted: string;
+      key_version: number;
+    }>();
+
+  if (!providerKey) {
+    return Response.json(
+      {
+        error: `No API key configured for ${PROVIDERS[settings.provider].label}`,
+      },
       { status: 400 }
     );
   }
@@ -137,12 +161,13 @@ export async function postChat(
     conversationId = conversation.id;
   }
 
-  const aiApiKey = await decryptUserSettingsApiKey(
+  const aiApiKey = await decryptProviderApiKey(
     db,
     encryptionKey,
     userId,
-    settings.api_key_encrypted,
-    settings.key_version
+    settings.provider,
+    providerKey.api_key_encrypted,
+    providerKey.key_version
   );
   const panosApiKey = await decryptDeviceApiKey(
     db,
@@ -166,7 +191,7 @@ export async function postChat(
   });
 
   const model = getModel(
-    settings.provider as Provider,
+    settings.provider,
     aiApiKey,
     settings.model_id
   );

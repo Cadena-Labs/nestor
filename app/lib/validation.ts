@@ -14,22 +14,23 @@ const providerSchema = z.custom<Provider>((value): value is Provider => {
   return typeof value === "string" && value in PROVIDERS;
 }, "Invalid provider");
 
+const providerKeyUpdateSchema = z.union([
+  z.string().trim().min(1).max(MAX_API_KEY_LENGTH),
+  z.null(),
+]);
+
+const providerKeysSchema = z.object({
+  anthropic: providerKeyUpdateSchema.optional(),
+  openai: providerKeyUpdateSchema.optional(),
+  openrouter: providerKeyUpdateSchema.optional(),
+});
+
 export const settingsSchema = z
   .object({
     provider: providerSchema,
-    modelId: z.string().trim().min(1).max(MAX_MODEL_ID_LENGTH),
+    modelId: z.string().trim().max(MAX_MODEL_ID_LENGTH).optional(),
     apiKey: z.string().trim().min(1).max(MAX_API_KEY_LENGTH).optional(),
-  })
-  .superRefine(({ provider, modelId }, ctx) => {
-    const validModel = PROVIDERS[provider].models.some((model) => model.id === modelId);
-
-    if (!validModel) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Invalid model for provider",
-        path: ["modelId"],
-      });
-    }
+    providerKeys: providerKeysSchema.optional(),
   });
 
 export const deviceCreateSchema = z.object({

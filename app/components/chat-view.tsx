@@ -43,7 +43,20 @@ export function ChatView() {
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((data: any) => setHasSettings(data.hasApiKey));
+      .then((data) => {
+        const parsed = data as {
+          provider: string | null;
+          modelId?: string | null;
+          keysConfigured?: Record<string, boolean>;
+        };
+        setHasSettings(
+          !!(
+            parsed.provider &&
+            parsed.modelId &&
+            parsed.keysConfigured?.[parsed.provider]
+          )
+        );
+      });
     fetch("/api/devices")
       .then((r) => r.json())
       .then((data: any) => {
@@ -129,7 +142,11 @@ export function ChatView() {
 
         {/* Device selector */}
         <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-800">
+          <label htmlFor="chat-device-select" className="sr-only">
+            Device
+          </label>
           <select
+            id="chat-device-select"
             value={selectedDeviceId}
             onChange={(e) => {
               setSelectedDeviceId(e.target.value);
@@ -287,8 +304,8 @@ export function ChatView() {
               <div className="inline-block rounded-lg bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
                 <span className="inline-flex gap-1">
                   <span className="animate-bounce">.</span>
-                  <span className="animate-bounce" style={{ animationDelay: "0.1s" }}>.</span>
-                  <span className="animate-bounce" style={{ animationDelay: "0.2s" }}>.</span>
+                  <span className="animate-bounce [animation-delay:0.1s]">.</span>
+                  <span className="animate-bounce [animation-delay:0.2s]">.</span>
                 </span>
               </div>
             </div>

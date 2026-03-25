@@ -12,5 +12,6 @@ export default [
   route("api/devices/:deviceId", "routes/api.devices.$deviceId.tsx"),
   route("api/devices", "routes/api.devices.tsx"),
   route("api/settings", "routes/api.settings.tsx"),
+  route("api/settings/models", "routes/api.settings.models.tsx"),
   route("api/chat", "routes/api.chat.tsx"),
 ] satisfies RouteConfig;

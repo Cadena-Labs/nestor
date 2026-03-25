@@ -1,13 +1,34 @@
-import { Show, RedirectToSignIn, useUser } from "@clerk/react-router";
+import { RedirectToSignIn, Show } from "@clerk/react-router";
 import { useState, useEffect } from "react";
 import { PROVIDERS, type Provider } from "../lib/ai-provider";
 
+type KeysConfigured = Record<Provider, boolean>;
+type ProviderKeyInputs = Record<Provider, string>;
+type ModelOption = {
+  id: string;
+  label: string;
+};
+
+const EMPTY_KEYS_CONFIGURED: KeysConfigured = {
+  anthropic: false,
+  openai: false,
+  openrouter: false,
+};
+
+const EMPTY_PROVIDER_KEY_INPUTS: ProviderKeyInputs = {
+  anthropic: "",
+  openai: "",
+  openrouter: "",
+};
+
 function SettingsContent() {
-  const { user } = useUser();
   const [provider, setProvider] = useState<Provider>("anthropic");
-  const [modelId, setModelId] = useState("claude-opus-4-6");
-  const [apiKey, setApiKey] = useState("");
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const [modelId, setModelId] = useState("");
+  const [providerKeys, setProviderKeys] = useState<ProviderKeyInputs>(EMPTY_PROVIDER_KEY_INPUTS);
+  const [keysConfigured, setKeysConfigured] = useState<KeysConfigured>(EMPTY_KEYS_CONFIGURED);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -18,38 +39,110 @@ function SettingsContent() {
   const [newDevice, setNewDevice] = useState({ name: "", host: "", apiKey: "" });
   const [addingDevice, setAddingDevice] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data: any) => {
-        if (data.provider) setProvider(data.provider);
-        if (data.modelId) setModelId(data.modelId);
-        setHasApiKey(data.hasApiKey);
-      });
+  const loadSettings = async () => {
+    const response = await fetch("/api/settings");
+    const data = (await response.json()) as {
+      provider: Provider | null;
+      modelId: string | null;
+      keysConfigured?: Partial<KeysConfigured>;
+    };
 
+    if (data.provider) {
+      setProvider(data.provider);
+    }
+
+    setModelId(data.modelId ?? "");
+    setKeysConfigured({
+      ...EMPTY_KEYS_CONFIGURED,
+      ...(data.keysConfigured ?? {}),
+    });
+  };
+
+  useEffect(() => {
+    void loadSettings();
     fetch("/api/devices")
       .then((r) => r.json())
-      .then((data: any) => setDevices(data));
+      .then((data) =>
+        setDevices(data as Array<{ id: string; name: string; host: string }>)
+      );
   }, []);
+
+  useEffect(() => {
+    if (!keysConfigured[provider]) {
+      setModels([]);
+      setModelsError("");
+      setModelsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadModels = async () => {
+      setModelsLoading(true);
+      setModelsError("");
+
+      try {
+        const response = await fetch(`/api/settings/models?provider=${provider}`);
+        const data = (await response.json()) as {
+          error?: string;
+          models?: ModelOption[];
+        };
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Failed to load models");
+        }
+
+        if (!cancelled) {
+          setModels(data.models ?? []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setModels([]);
+          setModelsError(
+            error instanceof Error ? error.message : "Failed to load models"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setModelsLoading(false);
+        }
+      }
+    };
+
+    void loadModels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [provider, keysConfigured]);
 
   const saveSettings = async () => {
     setSaving(true);
     setMessage("");
-    const body: any = { provider, modelId };
-    if (apiKey) body.apiKey = apiKey;
+    const providerKeysPayload = Object.fromEntries(
+      Object.entries(providerKeys)
+        .map(([key, value]) => [key, value.trim()])
+        .filter(([, value]) => value.length > 0)
+    );
+    const body: Record<string, unknown> = { provider, modelId };
+
+    if (Object.keys(providerKeysPayload).length > 0) {
+      body.providerKeys = providerKeysPayload;
+    }
 
     const res = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
 
     if (res.ok) {
       setMessage("Settings saved");
-      setApiKey("");
-      setHasApiKey(true);
+      setProviderKeys(EMPTY_PROVIDER_KEY_INPUTS);
+      await loadSettings();
     } else {
-      setMessage("Failed to save settings");
+      setMessage(data.error ?? "Failed to save settings");
     }
     setSaving(false);
   };
@@ -76,8 +169,6 @@ function SettingsContent() {
     await fetch(`/api/devices/${id}`, { method: "DELETE" });
     setDevices(devices.filter((d) => d.id !== id));
   };
-
-  const models = PROVIDERS[provider]?.models ?? [];
 
   return (
     <div className="mx-auto max-w-2xl p-6">
@@ -142,9 +233,48 @@ function SettingsContent() {
         </ul>
       </aside>
 
-      {/* AI Provider */}
       <section className="mb-8 rounded-lg border border-gray-200 p-6 dark:border-gray-800">
-        <h2 className="text-lg font-semibold mb-4">AI Provider</h2>
+        <h2 className="text-lg font-semibold mb-4">Provider API Keys</h2>
+
+        <div className="space-y-4">
+          {Object.entries(PROVIDERS).map(([key, { label }]) => {
+            const providerId = key as Provider;
+            const isSaved = keysConfigured[providerId];
+
+            return (
+              <label key={providerId} className="block">
+                <span className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span>{label}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      isSaved
+                        ? "bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-200"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                    }`}
+                  >
+                    {isSaved ? "Saved" : "Not saved"}
+                  </span>
+                </span>
+                <input
+                  type="password"
+                  value={providerKeys[providerId]}
+                  onChange={(e) =>
+                    setProviderKeys((current) => ({
+                      ...current,
+                      [providerId]: e.target.value,
+                    }))
+                  }
+                  placeholder={isSaved ? "Enter a new key to rotate it" : `Enter ${label} API key`}
+                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                />
+              </label>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="mb-8 rounded-lg border border-gray-200 p-6 dark:border-gray-800">
+        <h2 className="text-lg font-semibold mb-4">Active Chat Provider</h2>
 
         <label className="block mb-4">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -155,7 +285,7 @@ function SettingsContent() {
             onChange={(e) => {
               const p = e.target.value as Provider;
               setProvider(p);
-              setModelId(PROVIDERS[p].models[0]?.id ?? "");
+              setModelId("");
             }}
             className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
           >
@@ -167,35 +297,44 @@ function SettingsContent() {
           </select>
         </label>
 
-        <label className="block mb-4">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Model
-          </span>
-          <select
-            value={modelId}
-            onChange={(e) => setModelId(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-          >
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {keysConfigured[provider] ? (
+          <div className="mb-4 space-y-2">
+            <label className="block">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Model
+              </span>
+              <select
+                value={modelId}
+                onChange={(e) => setModelId(e.target.value)}
+                disabled={modelsLoading || models.length === 0}
+                className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900"
+              >
+                <option value="">
+                  {modelsLoading ? "Loading models..." : "Select a model"}
+                </option>
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label className="block mb-4">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            API Key {hasApiKey && "(saved)"}
-          </span>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={hasApiKey ? "Enter new key to update" : "Enter API key"}
-            className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-          />
-        </label>
+            {modelsError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{modelsError}</p>
+            )}
+
+            {!modelsLoading && !modelsError && models.length === 0 && (
+              <p className="text-sm text-gray-500">
+                No compatible models were returned for this provider.
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="mb-4 text-sm text-gray-500">
+            Save an API key for {PROVIDERS[provider].label} to load its live model list.
+          </p>
+        )}
 
         <button
           onClick={saveSettings}
