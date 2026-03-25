@@ -1,4 +1,6 @@
-# Included from this repo’s .git/config via install-git-hooks.sh (see include.path).
+# Source for scripts/install-git-hooks.sh, which copies this file to .git/nestor-signing.config
+# (with an absolute allowedSignersFile) and sets include.path to that copy so signing still
+# works when the working tree does not yet contain nestor.gitconfig (e.g. during rebase).
 # Override in ~/.gitconfig if your signing key or op-ssh-sign path differs.
 
 [user]
