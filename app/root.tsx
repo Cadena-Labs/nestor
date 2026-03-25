@@ -6,6 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { ui } from "@clerk/ui";
 import { ClerkProvider } from "@clerk/react-router";
 import { clerkMiddleware, rootAuthLoader } from "@clerk/react-router/server";
 
@@ -51,7 +52,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App({ loaderData }: Route.ComponentProps) {
   return (
-    <ClerkProvider loaderData={loaderData}>
+    <ClerkProvider loaderData={loaderData} ui={ui}>
       <Outlet />
     </ClerkProvider>
   );

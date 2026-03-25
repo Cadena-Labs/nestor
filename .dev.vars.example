@@ -1,4 +1,11 @@
-# Copy to `.dev.vars` for local dev (gitignored). Do not commit real values.
+# Key manifest for `scripts/run-with-ephemeral-dev-vars.sh` (used by `bun run dev`).
+# With `OP_ENVIRONMENT_ID` in env or `.op/refs.env`, dev runs as `op run --environment …`
+# and this file selects which env vars are written to a temporary `.dev.vars`.
+#
+# Setup: copy `.op/refs.env.example` → `.op/refs.env`, set OP_ENVIRONMENT_ID, ensure the
+# 1Password Environment defines the same variable names as below.
+#
+# Without 1Password CLI: copy this file to `.dev.vars`, fill values, run `bun run dev:plain`.
 
 # --- Preferred: 1Password Connect (runtime fetch from self-hosted connect-api) ---
 # CONNECT_SERVER_URL=https://connect-api.example.com
@@ -21,6 +28,5 @@ MAX_TOOL_OUTPUT_CHARS=
 CHAT_MAX_STEPS=
 CHAT_MAX_LOGS=
 
-# --- Optional: scripts/op-sync-wrangler-secrets.ts (1Password Environments → wrangler secret put) ---
-# OP_SERVICE_ACCOUNT_TOKEN=
-# OP_ENVIRONMENT_ID=
+# secrets:sync uses OP_SERVICE_ACCOUNT_TOKEN and OP_ENVIRONMENT_ID in the shell only — do not add
+# KEY=value lines for those here or they would be copied into .dev.vars for the Worker.

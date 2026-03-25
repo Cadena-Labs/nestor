@@ -6,7 +6,7 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 
 - **Runtime**: Cloudflare Workers
 - **Framework**: React Router v7 (framework mode); `/api/*` as resource routes
-- **AI**: Vercel AI SDK (provider-agnostic) + @assistant-ui/react (chat UI)
+- **AI**: Vercel AI SDK (provider-agnostic); chat UI uses `useChat` from `ai/react` (`@assistant-ui/*` is in dependencies but not used under `app/` yet)
 - **Auth**: Clerk
 - **Database**: Cloudflare D1
 - **Styling**: Tailwind CSS v4
@@ -35,7 +35,7 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 ## Secrets (1Password Environments + sync script — optional)
 
 - Use when you do **not** run Connect: keep a 1Password **Environment** as source of truth and run **`bun run secrets:sync`** in CI before deploy (see [`scripts/op-sync-wrangler-secrets.ts`](scripts/op-sync-wrangler-secrets.ts)). Requires `OP_SERVICE_ACCOUNT_TOKEN` and `OP_ENVIRONMENT_ID`. Example comments in [`scripts/github-deploy-workflow.example.yml`](scripts/github-deploy-workflow.example.yml).
-- **Local**: `.1password/environments.toml` → `.dev.vars`, or plain `.dev.vars` / `secrets:sync --write-dev-vars`.
+- **Local**: `bun run dev` with `op run` (see Learned Workspace Facts), `bun run dev:plain` with a static `.dev.vars`, or `secrets:sync --write-dev-vars`.
 
 ## Architecture
 
@@ -56,11 +56,13 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 
 - Use React Router v7 as the only HTTP/routing layer for this app, including all `/api/*` resource routes; do not add Hono or another parallel framework on the same worker.
 - Treat security and trust boundaries as a primary concern when suggesting architecture, dependencies, or operational changes.
-- Prefer signed commits (for example SSH signing via 1Password); do not disable Git signing to work around an unavailable signing agent.
+- Prefer signed commits (for example SSH signing via 1Password); do not disable Git signing to work around an unavailable signing agent; do not leave unsigned commits on the history when rewriting is acceptable.
+- Prefer 1Password Connect for production application secrets when the goal is to avoid storing those values in the Cloudflare dashboard; use Environments plus `secrets:sync` when Connect is not deployed.
 
 ## Learned Workspace Facts
 
 - Single maintainer on this project; history rewrites and force pushes do not require coordinating with other developers.
 - There is no `CLAUDE.md` in this repo; `AGENTS.md` is the canonical agent-facing project summary.
-- Local Wrangler development expects Worker secrets in `.dev.vars` at the repository root; the app does not load `.env` by default.
-- Optional `.1password/environments.toml` with `mount_paths` limits the 1Password Cursor plugin’s mounted-env validation to those paths; developers without a matching 1Password FIFO at those paths may see shell commands blocked in Cursor until they align mounts or disable validation for the repo.
+- Local Wrangler loads Worker secrets from `.dev.vars` at the repository root; the app does not load `.env` by default. `bun run dev` optionally wraps the dev server in `op run --environment …` when `OP_ENVIRONMENT_ID` is set in the environment or `.op/refs.env`, and generates a temporary `.dev.vars` from `.dev.vars.example`; use `bun run dev:plain` with a hand-maintained `.dev.vars` when not using that flow.
+- The 1Password Cursor plugin’s mounted-env hook is optional and not configured in-repo; if you use it, add a local `.1password/environments.toml` with `mount_paths` pointing at paths your setup actually uses.
+- Chat UI is wired with Vercel AI SDK `useChat` posting to `/api/chat`; `@assistant-ui/react` and `@assistant-ui/react-ai-sdk` are not imported in `app/` code today.

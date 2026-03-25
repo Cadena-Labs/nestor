@@ -157,23 +157,36 @@ export function buildPanosApiEndpoint(host: string): URL {
 
 export function buildSecurityHeaders(isDev: boolean): Headers {
   const headers = new Headers();
+  /** @see https://clerk.com/docs/security/clerk-csp — Clerk injects inline bootstrap scripts unless using nonce + strict-dynamic. */
   const scriptSrc = [
     "'self'",
+    "'unsafe-inline'",
     "https://clerk.com",
     "https://*.clerk.com",
     "https://*.clerk.accounts.dev",
+    "https://challenges.cloudflare.com",
   ];
   const connectSrc = [
     "'self'",
     "https://clerk.com",
     "https://*.clerk.com",
     "https://*.clerk.accounts.dev",
+    "https://clerk-telemetry.com",
+    "https://*.clerk-telemetry.com",
+    "https://challenges.cloudflare.com",
     "wss://*.clerk.com",
     "wss://*.clerk.accounts.dev",
     "https://api.anthropic.com",
     "https://api.openai.com",
     "https://openrouter.ai",
     "https://*.openrouter.ai",
+  ];
+  const frameSrc = [
+    "'self'",
+    "https://challenges.cloudflare.com",
+    "https://clerk.com",
+    "https://*.clerk.com",
+    "https://*.clerk.accounts.dev",
   ];
 
   if (isDev) {
@@ -189,8 +202,10 @@ export function buildSecurityHeaders(isDev: boolean): Headers {
       `script-src ${scriptSrc.join(" ")}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: https:",
+      "img-src 'self' data: https: https://img.clerk.com",
       `connect-src ${connectSrc.join(" ")}`,
+      "worker-src 'self' blob:",
+      `frame-src ${frameSrc.join(" ")}`,
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self' https://clerk.com https://*.clerk.com https://*.clerk.accounts.dev",
