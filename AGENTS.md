@@ -58,7 +58,7 @@ AI-powered networking assistant for Palo Alto firewall/Panorama monitoring.
 - Treat security and trust boundaries as a primary concern when suggesting architecture, dependencies, or operational changes.
 - Prefer signed commits (for example SSH signing via 1Password); do not disable Git signing to work around an unavailable signing agent; do not leave unsigned commits on the history when rewriting is acceptable.
 - Prefer 1Password Connect for production application secrets when the goal is to avoid storing those values in the Cloudflare dashboard; use Environments plus `secrets:sync` when Connect is not deployed.
-- Do not use git worktrees; use normal branches instead for parallel work or isolated experiments.
+- **Do not use `git worktree`** for this project (no linked worktrees / extra checkouts of the same repo). Use **normal clones or branches** for parallel work and experiments so agents and humans always see a single canonical working tree and `.git` layout.
 
 ## Learned Workspace Facts
 

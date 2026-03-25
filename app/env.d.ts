@@ -1,4 +1,20 @@
+// Vite-style `import.meta.env` and RR virtual/CSS modules without `types: ["vite/client"]`.
+declare module "*.css";
+
+declare module "virtual:react-router/server-build";
+
 declare global {
+  interface ImportMetaEnv {
+    readonly MODE: string;
+    readonly DEV: boolean;
+    readonly PROD: boolean;
+    readonly SSR: boolean;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+
   interface Env {
     /**
      * When using 1Password Connect (`CONNECT_SERVER_URL` + token + vault/item IDs), load from the Connect item’s

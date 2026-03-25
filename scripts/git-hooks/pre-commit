@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Require Git to attempt signing for this commit (GPG or SSH per gpg.format).
+# Final proof of a signature is enforced in pre-push via git verify-commit.
+
+gpgsign="$(git config --bool commit.gpgsign 2>/dev/null || true)"
+if [ "${gpgsign}" != "true" ]; then
+	echo "pre-commit: commit.gpgsign must be true (effective value: ${gpgsign:-unset})." >&2
+	echo "Enable signing for this repo, for example:" >&2
+	echo "  git config commit.gpgsign true" >&2
+	echo "  git config gpg.format ssh   # or openpgp" >&2
+	exit 1
+fi
+
+exit 0

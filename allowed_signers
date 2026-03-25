@@ -1,0 +1,4 @@
+# SSH keys permitted to sign Git objects for this repo (see ssh-keygen(1) ALLOWED SIGNERS).
+# Keep in sync with user.signingkey in nestor.gitconfig.
+
+james@cadenalabs.io namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID6XJafASPNluVGxWA2gPUk3XZygAy06PI+Ll2C8YeaH

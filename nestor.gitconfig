@@ -1,0 +1,15 @@
+# Included from this repo’s .git/config via install-git-hooks.sh (see include.path).
+# Override in ~/.gitconfig if your signing key or op-ssh-sign path differs.
+
+[user]
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID6XJafASPNluVGxWA2gPUk3XZygAy06PI+Ll2C8YeaH
+
+[gpg]
+	format = ssh
+
+[gpg "ssh"]
+	program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
+	allowedSignersFile = allowed_signers
+
+[commit]
+	gpgsign = true
